@@ -34,6 +34,7 @@ import com.tms.models.AuthenticationResponse;
 import com.tms.models.EmployeePagedList;
 import com.tms.entity.Employee;
 import com.tms.entity.Role;
+import com.tms.filters.UserAuthenticationFilter;
 import com.tms.services.EmployeeService;
 import com.tms.utils.ErrorUtil;
 import com.tms.utils.JwtTokenUtil;
@@ -41,10 +42,12 @@ import com.tms.utils.JwtTokenUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/employees")
 @RequiredArgsConstructor
+@Slf4j
 public class EmployeeController {
 	
 	private final EmployeeService employeeService;
@@ -70,7 +73,7 @@ public class EmployeeController {
 		return employeeService.getEmployees(pageable);
 	}
 	
-	@PostMapping("/save")
+	@PostMapping(value = "/save", produces = "application/json; charset=utf-8")
 	@Operation(summary = "Save employee", description = "Save Employee")
 	@SecurityRequirement(name = "Bearer Authentication")
 	public ResponseEntity<Employee> saveEmployee(@RequestBody @Validated Employee employee) {
@@ -119,13 +122,19 @@ public class EmployeeController {
 		}
 	}
 	
-	@GetMapping(value = "/{email}", produces = "application/json; charset=utf-8")
-	public ResponseEntity<Employee> findByEmail(@PathVariable("email") String email) {
-		Employee employee = employeeService.getEmployeeBy(email);
-		if (employee == null) {
-			return new ResponseEntity<Employee>(HttpStatus.NOT_FOUND);
-		}
-		return new ResponseEntity<Employee>(employee, HttpStatus.OK);
+//	@GetMapping(value = "/{email}", produces = "application/json; charset=utf-8")
+//	public ResponseEntity<Employee> findByEmail(@PathVariable("email") String email) {
+//		Employee employee = employeeService.getEmployeeBy(email);
+//		if (employee == null) {
+//			return new ResponseEntity<Employee>(HttpStatus.NOT_FOUND);
+//		}
+//		return new ResponseEntity<Employee>(employee, HttpStatus.OK);
+//	}
+	
+	@GetMapping(value = "/exist/{email}", produces = "application/json; charset=utf-8")
+	public Integer findExistEmail(@PathVariable("email") String email) {
+		log.info(email);
+		return employeeService.existEmail(email);
 	}
 	
 	private Employee findTokenOwner(String username) {

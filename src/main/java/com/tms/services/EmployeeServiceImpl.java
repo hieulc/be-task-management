@@ -33,108 +33,101 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 @Service
-public class EmployeeServiceImpl implements EmployeeService, UserDetailsService{
-	
+public class EmployeeServiceImpl implements EmployeeService, UserDetailsService {
+
 	private final EmployeeRepository employeeRepository;
 	private final RoleRepository roleRepository;
-	
 
 	public EmployeePagedList getEmployees(Pageable pageable) {
-		
+
 		Page<Employee> page = employeeRepository.findAll(pageable);
-		
+
 		PageRequest pageRequest = getPageRequestFrom(page);
 		List<Employee> employeeList = getEmployeeListFrom(page);
 		long totalElements = getTotalElementsFrom(page);
-		
-		
+
 		return new EmployeePagedList(employeeList, pageRequest, totalElements);
 	}
-	
+
 	private PageRequest getPageRequestFrom(Page<Employee> page) {
 		Pageable pageable = page.getPageable();
 		return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
 	}
-	
+
 	private List<Employee> getEmployeeListFrom(Page<Employee> page) {
-		return page.getContent()
-				.stream()
-				.collect(Collectors.toList());
+		return page.getContent().stream().collect(Collectors.toList());
 	}
-	
+
 	private long getTotalElementsFrom(Page<Employee> page) {
 		return page.getTotalElements();
 	}
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		
+
 		Employee employee = employeeRepository.findByEmail(username);
-		
+
 		if (employee == null) {
 			log.error("User not found in database");
 			throw new UsernameNotFoundException("User not found in database");
 		} else {
 			log.error("User found in database " + username);
 		}
-		
+
 		Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
 		employee.getEmpRoles()
 				.forEach(role -> authorities.add(new SimpleGrantedAuthority(role.getRoleName().toString())));
-		
-		
+
 		return new User(employee.getEmail(), employee.getPassword(), authorities);
 	}
 
 	@Override
 	@Transactional
 	public Employee saveEmployee(Employee employee) {
-		
+
 		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-		
-		
+
 		List<RoleNameEnum> userRoles = populateRoleList(employee.getEmpRoles());
-		
+
 		Set<Role> roleForUser = new HashSet<>();
-		
+
 		if (userRoles.size() == 0) {
 			roleForUser = addDefaultRoleToSet(userRoles);
 		} else {
 			roleForUser = addRolesToSet(userRoles);
 		}
-		
+
 		employee.setEmpRoles(roleForUser);
 		employee.setPassword(encoder.encode(employee.getPassword()));
-		
 		return employeeRepository.save(employee);
+
 	}
-	
+
 	private List<RoleNameEnum> populateRoleList(Set<Role> employeeRoles) {
 		List<RoleNameEnum> userRoles = new ArrayList<>();
 		for (Role employeeRole : employeeRoles) {
 			userRoles.add(employeeRole.getRoleName());
 		}
-		
+
 		return userRoles;
 	}
-	
+
 	private Set<Role> addDefaultRoleToSet(List<RoleNameEnum> userRoles) {
 		Role defaultRole = roleRepository.findByRoleName(RoleNameEnum.USER);
 		Set<Role> setOfDefaultRole = new HashSet<>();
 		setOfDefaultRole.add(defaultRole);
 		return setOfDefaultRole;
 	}
-	
+
 	private Set<Role> addRolesToSet(List<RoleNameEnum> userRoles) {
 		Set<Role> setOfRoles = new HashSet<>();
 		for (RoleNameEnum roleNameEnum : userRoles) {
 			Role userRole = roleRepository.findByRoleName(roleNameEnum);
 			setOfRoles.add(userRole);
 		}
-		
+
 		return setOfRoles;
 	}
-	
 
 	@Override
 	@Transactional
@@ -146,7 +139,7 @@ public class EmployeeServiceImpl implements EmployeeService, UserDetailsService{
 	public void addRoleToEmployee(String email, RoleNameEnum roleName) {
 		Employee employee = employeeRepository.findByEmail(email);
 		Role userRole = roleRepository.findByRoleName(roleName);
-		
+
 		Set<Role> employeeRoles = employee.getEmpRoles();
 		if (employeeRoles.contains(userRole)) {
 			return;
@@ -170,7 +163,10 @@ public class EmployeeServiceImpl implements EmployeeService, UserDetailsService{
 	public Employee updateEmployee(Employee updatedEmployee) {
 		return employeeRepository.save(updatedEmployee);
 	}
-	
-	
+
+	@Override
+	public Integer existEmail(String email) {
+		return employeeRepository.existEmail(email);
+	}
 
 }

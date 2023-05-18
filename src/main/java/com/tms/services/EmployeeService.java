@@ -17,7 +17,9 @@ public interface EmployeeService {
 	public void addRoleToEmployee(String email, RoleNameEnum roleName);
 	public Employee getEmployeeBy(String email);
 	public Employee updateEmployee(Employee updatedEmployee);
+	public Integer existEmail(String email);
 	
 	Optional<Employee> getEmployeeById(int id);
+	
 	
 }
