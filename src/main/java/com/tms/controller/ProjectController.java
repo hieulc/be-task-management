@@ -1,6 +1,7 @@
 package com.tms.controller;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.PageRequest;
@@ -55,6 +56,16 @@ public class ProjectController {
 
 		return projectService.getAllProject(username, pageable);
 	}
+	
+	@GetMapping("/project/{id}")
+	public ResponseEntity<Project> getProjectById(@PathVariable("id") int id) {
+		Optional<Project> project =  projectService.findById(id);
+		if (project.isPresent()) {
+			return new ResponseEntity<Project>(project.get(), HttpStatus.OK);
+		}
+		
+		return ResponseEntity.notFound().build();
+	}
 
 	@PostMapping
 	public ResponseEntity<Project> saveProject(@RequestBody @Validated Project project) {
@@ -91,5 +102,36 @@ public class ProjectController {
 	@GetMapping("/exist")
 	public Integer findUniqueProject(@RequestParam("createdBy") String createdBy, @RequestParam("projectName") String projectName) {
 		return projectService.findUniqueProject(createdBy, projectName);
+	}
+	
+	@PostMapping("/members/{username}")
+	public ResponseEntity<Project> addMemberToProject(@PathVariable("username") String username, @RequestBody Project project) {
+		log.info("ARE YOU HERE");
+		Project updatedProject = projectService.addMemberToProject(username, project);
+		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+	}
+	
+//	@GetMapping("/employees/{email}")
+//	public List<Project> findByMembers_Email(@PathVariable("email") String email) {
+//		return projectService.findByMembers_Email(email);
+//	}
+	
+	@GetMapping("/employees/pages")
+	public ProjectPagedList getAllProjectsByEmail(
+			@RequestParam(value = "pageNumber", required = false) Integer pageNumber,
+			@RequestParam(value = "pageSize", required = false) Integer pageSize,
+			@RequestParam(value = "email", required = true) String email) {
+
+		if (pageNumber == null || pageNumber < 0) {
+			pageNumber = DEFAULT_PAGE_NUMBER;
+		}
+
+		if (pageSize == null || pageSize < 0) {
+			pageSize = DEFAULT_PAGE_SIZE;
+		}
+
+		Pageable pageable = PageRequest.of(pageNumber, pageSize);
+
+		return projectService.findAllProjectsByEmail(email, pageable);
 	}
 }

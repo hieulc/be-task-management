@@ -1,5 +1,6 @@
 package com.tms.services;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
@@ -14,5 +15,8 @@ public interface ProjectService {
 	Project saveProject(Project project);
 	Project updateProject(Project updatedProject);
 	Integer findUniqueProject(String createdBy, String projectName);
+	Project addMemberToProject(String username, Project project);
+//	List<Project> findByMembers_Email(String email);
+	ProjectPagedList findAllProjectsByEmail(String email, Pageable pageable);
 	void deleteProject(int id);
 }

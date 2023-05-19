@@ -2,6 +2,7 @@ package com.tms.services;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.tms.entity.Employee;
 import com.tms.entity.Project;
@@ -58,12 +60,15 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	public Optional<Project> findProjectByProjectName(String projectName) {
-		log.debug("Project name: " + projectName);
 		return projectRepository.findByProjectName(projectName);
 	}
 
 	@Override
+	@Transactional
 	public Project saveProject(Project project) {
+		Employee employee = employeeRepository.findByEmail(project.getCreatedBy());
+		project.addMember(employee);
+//		employeeRepository.save(employee);
 		return projectRepository.save(project);
 	}
 
@@ -74,12 +79,24 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	public void deleteProject(int id) {
+		Optional<Project> projectOptional = projectRepository.findById(id);
+		if (projectOptional.isPresent()) {
+			Project project = projectOptional.get();
+			Set<Employee> members = project.getMembers();
+			members.stream().map(member -> {
+				member.removeProject(project);
+				employeeRepository.save(member);
+				return member;
+			}).collect(Collectors.toSet());
+		}
 		projectRepository.deleteById(id);
 	}
+	
+	
+	
 
 	@Override
 	public Optional<Project> findById(int id) {
-		log.debug("ID: " + id);
 		return projectRepository.findById(id);
 	}
 
@@ -87,5 +104,33 @@ public class ProjectServiceImpl implements ProjectService {
 	public Integer findUniqueProject(String createdBy, String projectName) {
 		return projectRepository.findUniqueProject(createdBy, projectName);
 	}
+
+	@Override
+	public Project addMemberToProject(String username, Project project) {
+		Employee employee = employeeRepository.findByEmail(username);
+		project.addMember(employee);
+		
+		employeeRepository.save(employee);
+		return projectRepository.save(project);
+		
+	}
+
+//	@Override
+//	public List<Project> findByMembers_Email(String email) {
+//		return projectRepository.findByMembers_Email(email);
+//	}
+
+	@Override
+	public ProjectPagedList findAllProjectsByEmail(String email, Pageable pageable) {
+		Page<Project> page = projectRepository.findByMembers_Email(email, pageable);
+
+		PageRequest pageRequest = getPageRequestFrom(page);
+		List<Project> projectList = getProjectListFrom(page);
+		long totalElements = getTotalElementsFrom(page);
+
+		return new ProjectPagedList(projectList, pageRequest, totalElements);
+	}
+	
+	
 
 }
