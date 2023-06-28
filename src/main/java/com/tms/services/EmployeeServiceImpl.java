@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,9 +21,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tms.models.EmployeeDtoPagedList;
 import com.tms.models.EmployeePagedList;
+import com.tms.dtos.EmployeeDto;
+import com.tms.dtos.mappers.EmployeeMapper;
 import com.tms.entity.Employee;
-import com.tms.entity.Project;
 import com.tms.entity.Role;
 import com.tms.entity.RoleNameEnum;
 import com.tms.repositories.EmployeeRepository;
@@ -38,6 +41,25 @@ public class EmployeeServiceImpl implements EmployeeService, UserDetailsService 
 
 	private final EmployeeRepository employeeRepository;
 	private final RoleRepository roleRepository;
+//	private final EmployeeMapper employeeMapper;
+	
+//	public EmployeeDtoPagedList getEmployeesDto(Pageable pageable) {
+//		Page<Employee> page = employeeRepository.findAll(pageable);
+//		
+//		EmployeeDtoPagedList employeeDtoPagedList = 
+//				new EmployeeDtoPagedList(
+//						getListEmployeeDTO(page),
+//						getPageRequestFrom(page),
+//						getTotalElementsFrom(page));
+//		return employeeDtoPagedList;
+//	}
+	
+//	private List<EmployeeDto> getListEmployeeDTO(Page<Employee> page) {
+//		return page.getContent()
+//				.stream()
+//				.map(employeeMapper::employeeToEmployeeDto)
+//				.collect(Collectors.toList());
+//	}
 
 	public EmployeePagedList getEmployees(Pageable pageable) {
 

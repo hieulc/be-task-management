@@ -26,10 +26,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-@JsonIdentityInfo(
-		scope = Employee.class,
-		generator = ObjectIdGenerators.PropertyGenerator.class, 
-		property = "id")
 public class Employee extends BaseEntity {
 
 	@Builder
@@ -60,20 +56,6 @@ public class Employee extends BaseEntity {
 	@ManyToMany(fetch = FetchType.EAGER)
 	private Set<Role> empRoles = new HashSet<>();
 	
-	@ManyToMany
-	@JoinTable(	        
-	        joinColumns = {
-	            @JoinColumn(name = "id")
-	        },
-	        inverseJoinColumns = {
-	            @JoinColumn(name = "project_id")
-	        }
-	    )
-	private Set<Project> joinedProjects = new HashSet<>();
 	
-	public void removeProject(Project p) {
-		this.joinedProjects.remove(p);
-		p.getMembers().remove(this);
-	}
 
 }

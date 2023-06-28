@@ -1,9 +1,13 @@
 package com.tms.controller;
 
 import java.net.URI;
-import java.util.List;
-import java.util.Optional;
+import java.sql.Timestamp;
 
+
+import java.util.Optional;
+import java.util.UUID;
+
+import org.slf4j.Logger;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -20,9 +24,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.tms.entity.Employee;
+import com.tms.entity.ListTask;
 import com.tms.entity.Project;
+import com.tms.entity.Task;
+import com.tms.models.ChangeOrderRequest;
 import com.tms.models.ProjectPagedList;
+import com.tms.models.TaskRequestPayload;
+import com.tms.services.EmployeeService;
+import com.tms.services.ListTaskService;
 import com.tms.services.ProjectService;
+import com.tms.services.TaskService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +49,9 @@ public class ProjectController {
 	private static final int DEFAULT_PAGE_SIZE = 5;
 
 	private final ProjectService projectService;
+	private final ListTaskService listTaskService;
+	private final TaskService taskService;
+	private final EmployeeService employeeService;
 
 	@GetMapping
 	public ProjectPagedList getProjects(
@@ -106,10 +121,118 @@ public class ProjectController {
 	
 	@PostMapping("/members/{username}")
 	public ResponseEntity<Project> addMemberToProject(@PathVariable("username") String username, @RequestBody Project project) {
-		log.info("ARE YOU HERE");
 		Project updatedProject = projectService.addMemberToProject(username, project);
 		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
 	}
+	
+	@DeleteMapping("/member/{username}")
+	public ResponseEntity<Project> removeMemberFromProject(@PathVariable("username") String username, @RequestParam("projectId") Integer projectId) {
+		Project updatedProject = projectService.removeMemberFromProject(username, projectId);
+		if (updatedProject == null) {
+			return ResponseEntity.notFound().build();
+		}
+		
+		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+	}
+	
+	@GetMapping("/list")
+	public ResponseEntity<Project> addTaskListToProject(
+			@RequestParam("listName") String listName,
+			@RequestParam("pos") Integer pos,
+			@RequestParam("projectId") Integer projectId) {
+		Optional<Project> projectOptional = projectService.findById(projectId);
+		if (projectOptional.isEmpty()) {
+			return ResponseEntity.notFound().build();
+		} else {
+			Project updatedProject = projectService.addListTaskToProject(listName, projectOptional.get(), pos);
+			return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+		}
+	}
+	
+	
+	
+	@GetMapping("/list/task")
+	public ResponseEntity<Project> addTaskToListTask(
+			@RequestParam("taskTitle") String taskTitle,
+			@RequestParam("pos") Integer pos,
+			@RequestParam("listId") UUID listId) {
+		Optional<ListTask> listTaskOptional = listTaskService.findListTaskById(listId);
+		if (listTaskOptional.isEmpty()) {
+			return ResponseEntity.notFound().build();
+		} else {
+			ListTask listTask = listTaskService.addTaskToListTask(taskTitle, listTaskOptional.get(), pos);
+			Project project = projectService.findProjectByListId(listId);
+			return new ResponseEntity<Project>(project, HttpStatus.OK);
+//			return new ResponseEntity<ListTask>(listTask, HttpStatus.OK);
+		}
+		
+	}
+	
+	@PostMapping("/list/task/{listId}")
+	public ResponseEntity<Project> updateTask(@PathVariable("listId") UUID listId, @RequestBody Task task) {
+			Task updatedTask = taskService.findTaskById(task.getTaskId());
+			updatedTask.setTaskDescr(task.getTaskDescr());
+			updatedTask.setTaskTitle(task.getTaskTitle());
+			taskService.updateTask(updatedTask);
+			
+			Project updatedProject = projectService.findProjectByListId(listId);
+			return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+		
+	}
+	
+	@GetMapping("/list/task/assignee")
+	public ResponseEntity<Project> addAssigneeToTask(@RequestParam("listId") UUID listId, @RequestParam("employeeId") Integer emplId, @RequestParam("taskId") UUID taskId) {
+		Task task = taskService.findTaskById(taskId);
+		Optional<Employee> optional = employeeService.getEmployeeById(emplId);
+		if (optional.isEmpty()) {
+			return ResponseEntity.notFound().build();
+		}
+		else {
+			Employee employee = optional.get();
+			task.addAssigneeToTask(employee);
+			taskService.updateTask(task);
+			Project updatedProject = projectService.findProjectByListId(listId);
+			return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+		}
+	}
+	
+	@GetMapping("/list/task/assignees/assignee")
+	public ResponseEntity<Project> removeAssignee(@RequestParam("listId") UUID listId, @RequestParam("assigneeId") Integer assigneeId, @RequestParam("taskId") UUID taskId) {
+		Task updatedTask = taskService.findTaskById(taskId);
+		Optional<Employee> optional = employeeService.getEmployeeById(assigneeId);
+		updatedTask.removeAssigneeToTask(optional.get());
+		taskService.updateTask(updatedTask);
+		Project updatedProject = projectService.findProjectByListId(listId);
+		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+		
+	}
+	
+	@PostMapping("/list/task/due-date/{listId}")
+	public ResponseEntity<Project> addDueDateToTask(@PathVariable("listId") UUID listID, @RequestBody Task task) {
+		Task updatedTask = taskService.findTaskById(task.getTaskId());
+		updatedTask.setDueDate(task.getDueDate());
+		Timestamp now = new Timestamp(System.currentTimeMillis());
+		if (now.compareTo(task.getDueDate()) > 0) {
+			updatedTask.setOverDue(true);
+		} else {
+			updatedTask.setOverDue(false);
+		}
+		taskService.updateTask(updatedTask);
+		Project updatedProject = projectService.findProjectByListId(listID);
+		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+	}
+	
+	@PostMapping("/list/task/priority/{listId}")
+	public ResponseEntity<Project> addPriority(@PathVariable("listId") UUID listID,
+			@RequestBody Task task) {
+		log.info(task.getTaskPriority().toString());
+		Task updatedTask = taskService.findTaskById(task.getTaskId());
+		updatedTask.setTaskPriority(task.getTaskPriority());
+		taskService.updateTask(updatedTask);
+		Project updatedProject = projectService.findProjectByListId(listID);
+		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+	}
+			
 	
 //	@GetMapping("/employees/{email}")
 //	public List<Project> findByMembers_Email(@PathVariable("email") String email) {
@@ -120,7 +243,7 @@ public class ProjectController {
 	public ProjectPagedList getAllProjectsByEmail(
 			@RequestParam(value = "pageNumber", required = false) Integer pageNumber,
 			@RequestParam(value = "pageSize", required = false) Integer pageSize,
-			@RequestParam(value = "email", required = true) String email) {
+			@RequestParam(value = "username", required = true) String email) {
 
 		if (pageNumber == null || pageNumber < 0) {
 			pageNumber = DEFAULT_PAGE_NUMBER;
@@ -134,4 +257,63 @@ public class ProjectController {
 
 		return projectService.findAllProjectsByEmail(email, pageable);
 	}
+	
+	@GetMapping("project/listTask/{listId}")
+	public ResponseEntity<Project> getProjectByListId(@PathVariable("listId") UUID listId) {
+		Project project = projectService.findProjectByListId(listId);
+		if (project == null) {
+			return ResponseEntity.notFound().build();
+		} else {
+			return new ResponseEntity<Project>(project, HttpStatus.OK);
+		}
+	}
+	
+	@PostMapping("/project/listTask/movedTask")
+	public ResponseEntity<Project> moveTask(@RequestBody TaskRequestPayload payload) {
+		UUID assignedListTaskId = payload.getAssignedListTaskId();
+		UUID unassignedListTaskId = payload.getUnassignedListTaskId();
+		UUID movedTaskId = payload.getMovedTaskId();
+		if (assignedListTaskId.equals(unassignedListTaskId)) {
+			UUID desTaskId = payload.getDesTaskId();
+			listTaskService.swapTask(assignedListTaskId, movedTaskId, desTaskId);
+		} else {
+			int dropPlace = payload.getDropPlace();
+			listTaskService.moveTask(assignedListTaskId, unassignedListTaskId, movedTaskId, dropPlace);
+		}
+		Project updatedProject = projectService.findProjectByListId(assignedListTaskId);
+		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+	}
+	
+	@PostMapping("/project/listTask/order")
+	public ResponseEntity<Project> changeOrderColumn(@RequestBody ChangeOrderRequest request) {
+		Integer projectId = request.getProjectId();
+		UUID sourceId = request.getSourceId();
+		UUID desId = request.getDesId();
+		
+		Project updatedProject = projectService.changeColumnOrder(projectId, sourceId, desId);
+		if (updatedProject == null) {
+			return ResponseEntity.notFound().build();
+		}
+		
+		return new ResponseEntity<Project>(updatedProject, HttpStatus.OK);
+	}
+	
+	@GetMapping("/createdBy")
+	public ProjectPagedList getAllProjectsByCreatedBy(
+			@RequestParam(value = "pageNumber", required = false) Integer pageNumber,
+			@RequestParam(value = "pageSize", required = false) Integer pageSize,
+			@RequestParam(value = "username", required = true) String email) {
+
+		if (pageNumber == null || pageNumber < 0) {
+			pageNumber = DEFAULT_PAGE_NUMBER;
+		}
+
+		if (pageSize == null || pageSize < 0) {
+			pageSize = DEFAULT_PAGE_SIZE;
+		}
+
+		Pageable pageable = PageRequest.of(pageNumber, pageSize);
+
+		return projectService.getProjectsByCreatedBy(email, pageable);
+	} 
 }
