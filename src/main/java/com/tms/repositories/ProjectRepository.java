@@ -24,9 +24,6 @@ public interface ProjectRepository extends JpaRepository<Project, Integer>{
 	
 	Optional<Project> findByListOfTasks_ListId(UUID listId);
 	
-	Page<Project> findByCreatedBy(String username, Pageable pageable);
-	
-	
 	@Query("SELECT 1 FROM Project p WHERE p.createdBy=?1 AND p.projectName=?2")
 	Integer findUniqueProject(String createdBy, String projectName);
 }
