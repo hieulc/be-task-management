@@ -53,15 +53,18 @@ public class Task {
 
 	@UpdateTimestamp
 	private Timestamp lastModifiedDate;
-	
+	private Timestamp dateAddDueDate;
 	private Timestamp dueDate;
 	
 	private Integer pos;
+	private Integer workingDays;
+	private Integer hoursToComplete;
 	
 	private boolean isCompleted;
 	private boolean isOverDue;
 	private boolean isArchived;
 	private TaskPriorityEnum taskPriority; 
+	
 
 //	@Version
 //	private long version;

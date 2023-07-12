@@ -105,11 +105,14 @@ public class ProjectServiceImpl implements ProjectService {
 
 	@Override
 	public Project addMemberToProject(String username, Project project) {
+		Project updatedProject = projectRepository.findById(project.getProjectId()).get();
+		
 		Employee employee = employeeRepository.findByEmail(username);
-		project.addMember(employee);
+		
+		updatedProject.addMember(employee);
 		
 		employeeRepository.save(employee);
-		return projectRepository.save(project);
+		return projectRepository.save(updatedProject);
 		
 	}
 	

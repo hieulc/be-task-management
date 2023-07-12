@@ -62,6 +62,12 @@ public class EmployeeBoostrap implements CommandLineRunner {
 					.lastName("nguyen")
 					.password(passwordEncoder.encode("password"))
 					.build();
+			Employee employee4 = Employee.builder()
+					.email("tanphat.huynh@dxc.com")
+					.firstName("phat")
+					.lastName("huynh")
+					.password(passwordEncoder.encode("password"))
+					.build();
 			
 			Set<Role> roleForUser = new HashSet<>();
 			roleForUser.add(userRole);
@@ -69,6 +75,7 @@ public class EmployeeBoostrap implements CommandLineRunner {
 			employee1.setEmpRoles(roleForUser);
 			employee2.setEmpRoles(roleForUser);
 			employee3.setEmpRoles(roleForUser);
+			employee4.setEmpRoles(roleForUser);
 			
 //			employeeRepository.save(employee1);
 //			
@@ -83,6 +90,8 @@ public class EmployeeBoostrap implements CommandLineRunner {
 			employeeRepository.save(employee1);
 			employeeRepository.save(employee2);
 			employeeRepository.save(employee3);
+			employeeRepository.save(employee4);
+			
 			
 		}
 	}

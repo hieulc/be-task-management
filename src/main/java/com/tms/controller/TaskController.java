@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.tms.entity.Employee;
 import com.tms.entity.Task;
+import com.tms.models.TableData;
 import com.tms.services.EmployeeService;
 import com.tms.services.TaskService;
 
@@ -74,7 +75,10 @@ public class TaskController {
 		Task updatedTask = taskService.findTaskById(task.getTaskId());
 		
 		updatedTask.setDueDate(task.getDueDate());
+//		updatedTask.setWorkingDays(task.getWorkingDays());
+	
 		Timestamp now = new Timestamp(System.currentTimeMillis());
+		updatedTask.setDateAddDueDate(now);
 		
 		if (now.compareTo(task.getDueDate()) > 0) {
 			updatedTask.setOverDue(true);
@@ -85,17 +89,39 @@ public class TaskController {
 		return new ResponseEntity<Task>(updatedTask, HttpStatus.OK);
 	}
 	
+	@PostMapping("/working-days")
+	public ResponseEntity<Task> addWorkingDays(@RequestBody Task task) {
+		Task updatedTask = taskService.findTaskById(task.getTaskId());
+		
+		updatedTask.setWorkingDays(task.getWorkingDays());
+		
+		taskService.updateTask(updatedTask);
+		return new ResponseEntity<Task>(updatedTask, HttpStatus.OK);
+	}
+	
 	@GetMapping("/assigned/{email}")
 	public ResponseEntity<List<Task>> findAssignedTasksByEmail(@PathVariable("email") String email) {
 		List<Task> assignedTasks = taskService.findTasksByEmail(email);
 		return new ResponseEntity<List<Task>>(assignedTasks, HttpStatus.OK);
 	}
 	
+	
+	
 	@GetMapping("/archive/{taskId}")
 	public ResponseEntity<Task> setArchive(@PathVariable("taskId") UUID taskId) {
 		Task updatedTask = taskService.findTaskById(taskId);
 		updatedTask.setArchived(true);
 		
+		taskService.updateTask(updatedTask);
+		return new ResponseEntity<Task>(updatedTask, HttpStatus.OK);
+	}
+	
+	@GetMapping("/completed/{taskId}")
+	public ResponseEntity<Task> setTaskCompleted(@PathVariable("taskId") UUID taskId, @RequestParam("completed") boolean isCompleted, @RequestParam("hoursToComplete") int hoursToComplete) {
+		Task updatedTask = taskService.findTaskById(taskId);
+		
+		updatedTask.setCompleted(isCompleted);
+		updatedTask.setHoursToComplete(hoursToComplete);
 		taskService.updateTask(updatedTask);
 		return new ResponseEntity<Task>(updatedTask, HttpStatus.OK);
 	}

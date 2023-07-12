@@ -2,9 +2,11 @@ package com.tms.controller;
 
 import java.net.URI;
 import java.sql.Timestamp;
-
-
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -30,6 +32,7 @@ import com.tms.entity.Project;
 import com.tms.entity.Task;
 import com.tms.models.ChangeOrderRequest;
 import com.tms.models.ProjectPagedList;
+import com.tms.models.TableData;
 import com.tms.models.TaskRequestPayload;
 import com.tms.services.EmployeeService;
 import com.tms.services.ListTaskService;
@@ -316,4 +319,119 @@ public class ProjectController {
 
 		return projectService.getProjectsByCreatedBy(email, pageable);
 	} 
+	
+	@GetMapping("/tableData/{projectId}")
+	public ResponseEntity<List<TableData>> fetchTableData(@PathVariable("projectId") int projectId) {
+		Project project = projectService.findById(projectId).get();
+		Set<Employee> members = project.getMembers();
+		Set<ListTask> listTasks = project.getListOfTasks();
+		
+		Set<Task> tasks = new HashSet<>();
+		
+		for (ListTask list : listTasks) {
+			tasks.addAll(list.getTasks());
+		}
+		
+		List<TableData> tableData2 = new ArrayList<>();
+		
+		for (Task task : tasks) {
+			for (Employee member : members) {
+				for (Employee assignee : task.getAssignees()) {
+					if (assignee.getEmail().equals(member.getEmail())) {
+						if (tableData2.size() == 0) {
+							List<UUID> listTasksId = new ArrayList<>();
+							if (task.isCompleted()) {
+								listTasksId.add(task.getTaskId());
+								TableData firstData = TableData.builder()
+										.username(member.getEmail())
+										.workingDays(task.getWorkingDays())
+										.completedTasks(1)
+										.assignedTasksId(listTasksId)
+										.build();
+								tableData2.add(firstData);
+							}
+							else {
+								TableData firstData = TableData.builder()
+										.username(member.getEmail())
+										.workingDays(task.getWorkingDays())
+										.completedTasks(0)
+										.assignedTasksId(listTasksId)
+										.build();
+								tableData2.add(firstData);
+							}
+							
+						} else {
+							for (int i = 0; i < tableData2.size(); i++) {
+								TableData data = tableData2.get(i);
+								
+								if (member.getEmail().equals(data.getUsername()) && !data.getAssignedTasksId().contains(task.getTaskId())) {
+									
+											if (task.isCompleted()) {
+												int completedTasks = data.getCompletedTasks() + 1;
+												int workingDays = data.getWorkingDays() + task.getWorkingDays();
+												data.setCompletedTasks(completedTasks);
+												data.setWorkingDays(workingDays);
+											} else {
+												int workingDays = data.getWorkingDays() + task.getWorkingDays();
+												data.setWorkingDays(workingDays);
+											}
+									
+									
+								}
+								else {
+									if (task.isCompleted()) {
+										TableData newData = TableData.builder()
+												.username(member.getEmail())
+												.completedTasks(1)
+												.workingDays(task.getWorkingDays())
+												.build();
+										tableData2.add(newData);
+									} else {
+										TableData newData = TableData.builder()
+												.username(member.getEmail())
+												.completedTasks(0)
+												.workingDays(task.getWorkingDays())
+												.build();
+										tableData2.add(newData);
+									}
+											
+								}
+							}
+						}
+						
+					}
+				}
+			}
+		}
+		
+		List<TableData> tableData = new ArrayList<>();
+		
+		
+		
+		
+		for (Employee employee : members) {
+			int completedTasks = 0;
+			int workingDays = 0;
+			List<Task> assignedTasks = taskService.findTasksByEmail(employee.getEmail());
+			if (assignedTasks.size() != 0) {
+				for (Task task : assignedTasks) {
+					if (task.isCompleted()) {
+						completedTasks += 1;
+					}
+					
+					workingDays += task.getWorkingDays();
+				} 
+				TableData data = TableData.builder()
+						.username(employee.getEmail())
+						.completedTasks(completedTasks)
+						.workingDays(workingDays)
+						.build();
+				tableData.add(data);
+			}
+			
+		}
+		
+		return new ResponseEntity<List<TableData>>(tableData, HttpStatus.OK);
+		
+	}
 }

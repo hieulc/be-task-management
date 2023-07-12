@@ -29,6 +29,7 @@ public class ListTaskServiceImpl implements ListTaskService {
 		task.setOverDue(false);
 		task.setArchived(false);
 		task.setPos(pos);
+		task.setWorkingDays(1);
 		
 		Optional<ListTask> optional = listTaskRepository.findById(listTask.getListId());
 		if (optional.isEmpty()) {

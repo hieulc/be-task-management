@@ -10,6 +10,7 @@ public interface TaskService {
 	
 	Task updateTask(Task updatedTask);
 	
+	
 	List<Task> findTasksByEmail(String email);
 	
 	
